@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Runtime artifacts
+data/output/
+*.db
+*.db-journal
+mobileclip_blt.ts
+models/yoloe-11s-seg.pt
+models/yolo11n.pt
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
