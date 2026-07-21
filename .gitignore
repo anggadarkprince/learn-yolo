@@ -11,7 +11,7 @@ data/output/
 *.db-journal
 mobileclip_blt.ts
 models/yoloe-11s-seg.pt
-models/yolo11n.pt
+models/yolo11*.pt
 
 # OS / editor
 .DS_Store
