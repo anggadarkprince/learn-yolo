@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Axis Camera - WebRTC</title>
+    <style>
+        body { margin:0; background:#000; color:white; font-family:Arial; text-align:center; }
+        video { width:100%; max-width:1000px; margin:20px auto; display:block; background:black; }
+    </style>
+</head>
+<body>
+<h2>Axis Camera - WebRTC</h2>
+<video id="video" autoplay muted playsinline controls></video>
+<button onclick="captureSnapshot()">Capture & Download</button>
+<button onclick="sendSnapshotToServer()">Send Snapshot To Server</button>
+
+<script>
+    const video = document.getElementById('video');
+    const streamName = "axis-cam";
+
+    async function startWebRTC() {
+        const pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
+
+        pc.ontrack = (e) => {
+            video.srcObject = e.streams[0];
+        };
+
+        pc.oniceconnectionstatechange = () => {
+            console.log("ICE State:", pc.iceConnectionState);
+        };
+
+        try {
+            // 1. Create offer
+            const offer = await pc.createOffer({
+                offerToReceiveVideo: true,
+                offerToReceiveAudio: true
+            });
+            await pc.setLocalDescription(offer);
+
+            // 2. Send offer to MediaMTX WHEP
+            const response = await fetch(`http://localhost:8889/${streamName}/whep`, {
+                method: "POST",
+                headers: { "Content-Type": "application/sdp" },
+                body: pc.localDescription.sdp
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`WHEP failed: ${response.status} - ${text}`);
+            }
+
+            const answerSdp = await response.text();
+            await pc.setRemoteDescription({
+                type: "answer",
+                sdp: answerSdp
+            });
+
+            console.log("✅ WebRTC Connected Successfully!");
+
+        } catch (err) {
+            console.error("❌ WebRTC Error:", err);
+        }
+    }
+
+    window.onload = startWebRTC;
+
+    function captureSnapshot() {
+        const canvas = document.createElement('canvas');
+        const video = document.getElementById('video');
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Download as PNG
+        const link = document.createElement('a');
+        link.download = `camera-snapshot-${new Date().toISOString().slice(0,19)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    function sendSnapshotToServer() {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('file', blob, 'snapshot.png');
+            formData.append('camera', 'axis-cam');
+
+            await fetch('https://api.escuelajs.co/api/v1/files/upload', {
+                method: 'POST',
+                body: formData
+            });
+            alert('Submitted')
+        }, 'image/png');
+    }
+</script>
+</body>
+</html>

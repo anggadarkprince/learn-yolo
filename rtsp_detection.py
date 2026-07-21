@@ -1,11 +1,18 @@
 from ultralytics import YOLO
 import cv2
 
-RTSP_URL = "rtsp://132.239.12.145/axis-media/media.amp"
+RTSP_URL = "rtsp://localhost:8554/live/stream1"
 
 model = YOLO("models/ppe.pt")
 
-results = model.predict(source=RTSP_URL, stream=True, show=False, classes=[0,2,4,5,7])
+results = model.track(
+    source=RTSP_URL,
+    stream=True,
+    persist=True,
+    conf=0.7,
+    show=False,
+    classes=[0,2,4,5,7],
+)
 
 for r in results:
     # Get the annotated frame (with bounding boxes and labels drawn)
